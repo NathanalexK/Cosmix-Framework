@@ -1,4 +1,4 @@
-# Bienvenue dans Summer
+# Bienvenue dans Cosmix
 
 ### Avant de commencer:
 - Creer un fichier web.xml

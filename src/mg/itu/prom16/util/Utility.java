@@ -13,4 +13,13 @@ public class Utility {
     public static String capitalize(String str) {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
+
+    public static boolean contains(String[] list, String target) {
+        for(String item : list) {
+            if(item.equals(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

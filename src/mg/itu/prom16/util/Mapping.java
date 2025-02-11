@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Post;
+import mg.itu.prom16.configuration.RoleConfiguration;
 import mg.itu.prom16.enumerations.HttpMethod;
 
 import java.lang.reflect.*;
@@ -131,14 +132,14 @@ public class Mapping {
 //        throw new Exception("Method Not Found: " + methodName + " in class: " + className);
 //    }
 
-    public void execMapping(HttpServletRequest request, HttpServletResponse response)
+    public void execMapping(HttpServletRequest request, HttpServletResponse response, RoleConfiguration roleConfiguration)
             throws Exception {
         HttpMethod requestMethod = HttpMethod.valueOf(request.getMethod().toUpperCase());
         System.out.println(requestMethod);
         System.out.println("list: " + this.methodActions);
         for(HttpMethodAction methodAction : methodActions) {
             if(methodAction.getHttpMethod() == requestMethod) {
-                methodAction.execMethod(request, response);
+                methodAction.execMethod(request, response, roleConfiguration);
                 return;
             }
         }

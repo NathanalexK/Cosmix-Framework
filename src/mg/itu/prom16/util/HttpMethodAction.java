@@ -10,10 +10,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.RestApi;
+import mg.itu.prom16.annotations.security.Authenticated;
+import mg.itu.prom16.annotations.security.Roles;
+import mg.itu.prom16.configuration.RoleConfiguration;
 import mg.itu.prom16.enumerations.HttpMethod;
-import mg.itu.prom16.exception.FormException;
+import mg.itu.prom16.exception.AuthenticationRequiredException;
+import mg.itu.prom16.exception.UnallowedRoleException;
 import mg.itu.prom16.exception.ValidationException;
-import mg.itu.prom16.exception.ValidationExceptionList;
 import mg.itu.prom16.http.HttpException;
 import mg.itu.prom16.page.ContentType;
 
@@ -23,6 +26,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -32,12 +36,45 @@ public class HttpMethodAction {
     private String action;
     private String actionClass;
     private Boolean isApi;
+    private String[] roles = new String[0];
+    private boolean hasRoles = false;
+    private boolean requireAuth = false;
 
     public HttpMethodAction(HttpMethod httpMethod, Method action, Class<?> actionClass) {
         this.setHttpMethod(httpMethod);
         this.setAction(action);
         this.setActionClass(actionClass);
         this.setApi(action.isAnnotationPresent(RestApi.class));
+        this.setRequireAuth(action.isAnnotationPresent(Authenticated.class));
+        this.setHasRoles(action.isAnnotationPresent(Roles.class));
+        if(action.isAnnotationPresent(Roles.class)) {
+            String[] roles = action.getAnnotation(Roles.class).value();
+            setRoles(roles);
+        }
+    }
+
+    public boolean isHasRoles() {
+        return hasRoles;
+    }
+
+    public void setHasRoles(boolean hasRoles) {
+        this.hasRoles = hasRoles;
+    }
+
+    public String[] getRoles() {
+        return roles;
+    }
+
+    public void setRoles(String[] roles) {
+        this.roles = roles;
+    }
+
+    public boolean isRequireAuth() {
+        return requireAuth;
+    }
+
+    public void setRequireAuth(boolean requireAuth) {
+        this.requireAuth = requireAuth;
     }
 
     public HttpMethod getHttpMethod() {
@@ -79,8 +116,17 @@ public class HttpMethodAction {
         this.action = action.getName();
     }
 
-    public void execMethod(HttpServletRequest request, HttpServletResponse response)
+    public void execMethod(HttpServletRequest request, HttpServletResponse response, RoleConfiguration roleConfiguration)
         throws Exception {
+
+        if(this.isRequireAuth() && !roleConfiguration.isAuthenticated(request)) {
+            throw new AuthenticationRequiredException();
+        }
+
+        if(hasRoles && !Utility.contains(this.getRoles(), roleConfiguration.getRole(request))){
+            throw new UnallowedRoleException();
+        }
+
         CustomSession customSession = null;
 
         Class<?> controllerClass = this.getActionClass();

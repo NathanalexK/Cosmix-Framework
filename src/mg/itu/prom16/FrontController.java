@@ -15,6 +15,8 @@ import mg.itu.prom16.exception.UnallowedRoleException;
 import mg.itu.prom16.http.HttpException;
 import mg.itu.prom16.page.ContentType;
 import mg.itu.prom16.page.PageError;
+import mg.itu.prom16.security.HttpSecurity;
+import mg.itu.prom16.security.HttpSecurityConfiguration;
 import mg.itu.prom16.util.Mapping;
 import mg.itu.prom16.util.ModelView;
 import mg.itu.prom16.util.MyJSON;
@@ -36,8 +38,10 @@ public class FrontController extends HttpServlet {
     protected static List<String> controllersList = null;
     protected static Map<String, Mapping> urlMapping = null;
     protected static boolean firstInit = true;
-    protected  String appName = "";
+    protected static String appName = "";
     protected RoleConfiguration roleConfiguration = new DefaultRoleConfiguration();
+//    protected static HttpSecurityConfiguration httpSecurityConfiguration = new HttpSecurityConfiguration();
+    protected static HttpSecurity httpSecurity = new HttpSecurity();
 
     @Override
     public void init() throws ServletException{
@@ -48,6 +52,7 @@ public class FrontController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        System.out.println("Processing GET method");
         processRequest(request, response);
     }
 
@@ -60,6 +65,13 @@ public class FrontController extends HttpServlet {
     protected void doFirstInit(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String packageName = this.getInitParameter("controller-package");
         String roleConfigName = this.getInitParameter("role-config-class");
+        String securityConfigName = this.getInitParameter("security-config-class");
+
+        if(securityConfigName != null) {
+            Class<HttpSecurityConfiguration> httpSecurityConfigurationClass = (Class<HttpSecurityConfiguration>) Class.forName(securityConfigName);
+            HttpSecurityConfiguration httpSecurityConfiguration = httpSecurityConfigurationClass.getDeclaredConstructor().newInstance();
+            httpSecurityConfiguration.configure(FrontController.getHttpSecurity());
+        }
 
         appName = getServletContext().getContextPath();
         urlMapping = getAllUrlMapping(packageName, appName);
@@ -69,11 +81,10 @@ public class FrontController extends HttpServlet {
 
         if(roleConfigName != null) {
             Class<RoleConfiguration> configClass = (Class<RoleConfiguration>) Class.forName(roleConfigName);
-//            if(RoleConfiguration.class.isAssignableFrom(configClass)) {
-//                configClass =
             this.roleConfiguration = configClass.getDeclaredConstructor().newInstance();
-//            }
         }
+
+
 
 
 
@@ -155,5 +166,17 @@ public class FrontController extends HttpServlet {
     protected static Mapping getMapping(String url) {
 //        if(url.endsWith("/")) url = url.substring(0, url.length() - 1);
         return urlMapping.get(url);
+    }
+
+    public static String getApplicationName() {
+        return appName;
+    }
+
+    public static HttpSecurity getHttpSecurity() {
+        return httpSecurity;
+    }
+
+    public static void setHttpSecurity(HttpSecurity httpSecurity) {
+        FrontController.httpSecurity = httpSecurity;
     }
 }

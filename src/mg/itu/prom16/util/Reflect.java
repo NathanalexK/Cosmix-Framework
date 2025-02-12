@@ -6,13 +6,11 @@ import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.annotations.model.*;
 import mg.itu.prom16.enumerations.HttpMethod;
 import mg.itu.prom16.exception.ValidationException;
-import mg.itu.prom16.exception.ValidationExceptionList;
 import mg.itu.prom16.http.HttpException;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.*;
 
@@ -51,6 +49,7 @@ public class Reflect {
 
     public static Map<String, Mapping> getAllUrlMapping(String packageName, String appName)
             throws Exception {
+        System.out.println("Preparing to get All Url Mapping...");
         Map<String, Mapping> urlMapping = new HashMap<>();
         List<Class<?>> controllers = getControllers(packageName);
 
@@ -61,9 +60,10 @@ public class Reflect {
             for(Method method : methods) {
                 if(!method.isAnnotationPresent(Url.class)) continue;
 
-                String url = appName + method.getAnnotation(Url.class).url();
+                String url = appName + method.getAnnotation(Url.class).value();
+                System.out.println("url: " + url);
                 HttpMethod actionHttpMethod = HttpMethodUtils.getHttpMethod(method);
-                HttpMethodAction methodAction = new HttpMethodAction(actionHttpMethod, method, controller);
+                HttpMethodAction methodAction = new HttpMethodAction(actionHttpMethod, method, controller, url);
 
                 if(!hmaSet.add(methodAction)) {
                     throw new HttpException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Duplicate method name for: " + controller.getName() + "." + method.getName());

@@ -24,7 +24,7 @@ public class PageUtils {
         String html = "";
         html += " name=\"" + name + "\"";
         html += " value=\"";
-        if(!request.getParameter(name).trim().isBlank()) {
+        if(request.getParameter(name) != null && !request.getParameter(name).trim().isBlank()) {
             html += request.getParameter(name);
         }
         else {

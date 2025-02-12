@@ -45,7 +45,6 @@ public class PageError {
                         font-size: 24px;
                     }
                     .content {
-                        font-family: cursive;
                     }
                 </style>
             </head>

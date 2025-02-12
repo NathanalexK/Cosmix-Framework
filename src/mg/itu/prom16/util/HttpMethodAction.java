@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
+import mg.itu.prom16.FrontController;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.RestApi;
 import mg.itu.prom16.annotations.security.Authenticated;
@@ -19,6 +20,7 @@ import mg.itu.prom16.exception.UnallowedRoleException;
 import mg.itu.prom16.exception.ValidationException;
 import mg.itu.prom16.http.HttpException;
 import mg.itu.prom16.page.ContentType;
+import mg.itu.prom16.security.UrlRole;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -40,13 +42,31 @@ public class HttpMethodAction {
     private boolean hasRoles = false;
     private boolean requireAuth = false;
 
-    public HttpMethodAction(HttpMethod httpMethod, Method action, Class<?> actionClass) {
+    public HttpMethodAction(HttpMethod httpMethod, Method action, Class<?> actionClass, String url) {
         this.setHttpMethod(httpMethod);
         this.setAction(action);
         this.setActionClass(actionClass);
         this.setApi(action.isAnnotationPresent(RestApi.class));
-        this.setRequireAuth(action.isAnnotationPresent(Authenticated.class));
-        this.setHasRoles(action.isAnnotationPresent(Roles.class));
+
+        for(UrlRole urlRole: FrontController.getHttpSecurity().getUrlRoles()){
+//            boolean isPermitAll = ArrayUtils.contains(urlRole.getRoles(), "*") || urlRole.getRoles().length == 0;
+
+            for(String urlPattern: urlRole.getUrlPatterns()) {
+                if(StringMatcher.isMatch(FrontController.getApplicationName() + urlPattern, url)){
+                    System.out.println("Url Match: " + url);
+                    this.setRoles(urlRole.getRoles());
+//                    this.setHasRoles(!isPermitAll);
+                    this.setRequireAuth(urlRole.isRequireAuth());
+                }
+            }
+        }
+
+        if(action.isAnnotationPresent(Authenticated.class)) {
+            this.setRequireAuth(true);
+        }
+//        this.setHasRoles(action.isAnnotationPresent(Roles.class));
+
+
         if(action.isAnnotationPresent(Roles.class)) {
             String[] roles = action.getAnnotation(Roles.class).value();
             setRoles(roles);
@@ -66,6 +86,11 @@ public class HttpMethodAction {
     }
 
     public void setRoles(String[] roles) {
+        if(roles == null || roles.length == 0 || ArrayUtils.contains(roles, "*")) {
+            this.setHasRoles(false);
+        } else {
+            this.setHasRoles(true);
+        }
         this.roles = roles;
     }
 
@@ -179,6 +204,20 @@ public class HttpMethodAction {
 //            }
         }
 
+        if(this.checkBindingErrors(request, response)) {
+            String prevUrl = UrlResolver.getRelativeUrl(request.getHeader("Referer"));
+            System.out.printf("Prev Url:" + prevUrl);
+            HttpServletRequestWrapper newReq = new HttpServletRequestWrapper(request) {
+                @Override
+                public String getMethod() {
+                    return "GET";
+                }
+            };
+            request.removeAttribute("hasError");
+            request.getServletContext().getRequestDispatcher(prevUrl).forward(newReq, response);
+            return;
+        }
+
         Object invoked = actionMethod.invoke(controller, paramValues);
         if (customSession != null) customSession.toHttpSession(request.getSession());
 
@@ -206,24 +245,35 @@ public class HttpMethodAction {
         out.close();
     }
 
+    private boolean checkBindingErrors(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Object hasErrorObj = request.getAttribute("hasError");
+        if(hasErrorObj instanceof Boolean hasError) {
+            System.out.println("There's an error");
+            return hasError;
+
+        }
+
+        return false;
+    }
+
     public void processModelView(HttpServletRequest request, HttpServletResponse response, ModelView mv) throws ServletException, IOException {
         mv.getAttributes().forEach(request::setAttribute);
-        Object hasErrorObj = request.getAttribute("hasError");
-        System.out.println("hasErrorObj: " + hasErrorObj);
-        if(hasErrorObj != null && hasErrorObj instanceof Boolean hasError && hasError) {
-            System.out.println("Has error = true");
-            HttpServletRequestWrapper wrapper = new HttpServletRequestWrapper(request){
-                @Override
-                public String getMethod() {
-                    return "GET";
-                }
-            };
-            System.out.println("New Method: " + request.getMethod());
-            String referer = "/" + request.getHeader("Referer");
-            request.setAttribute("hasError", null);
-            request.getServletContext().getRequestDispatcher(mv.getRedirectErrorUrl()).forward(wrapper, response);
-            return;
-        }
+//        Object hasErrorObj = request.getAttribute("hasError");
+//        System.out.println("hasErrorObj: " + hasErrorObj);
+//        if(hasErrorObj != null && hasErrorObj instanceof Boolean hasError && hasError) {
+//            System.out.println("Has error = true");
+//            HttpServletRequestWrapper wrapper = new HttpServletRequestWrapper(request){
+//                @Override
+//                public String getMethod() {
+//                    return "GET";
+//                }
+//            };
+//            System.out.println("New Method: " + request.getMethod());
+//            String referer = "/" + request.getHeader("Referer");
+//            request.setAttribute("hasError", null);
+//            request.getServletContext().getRequestDispatcher(mv.getRedirectErrorUrl()).forward(wrapper, response);
+//            return;
+//        }
 
 
         request.getServletContext().getRequestDispatcher(mv.getUrl())

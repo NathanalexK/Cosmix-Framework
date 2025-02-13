@@ -4,6 +4,7 @@ package mg.itu.prom16;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,8 +22,8 @@ import mg.itu.prom16.util.Mapping;
 import mg.itu.prom16.util.ModelView;
 import mg.itu.prom16.util.MyJSON;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -34,18 +35,17 @@ import static mg.itu.prom16.util.Reflect.*;
     maxFileSize = 1024 * 1024 * 10,       // 10 MB
     maxRequestSize = 1024 * 1024 * 15     // 15 MB
 )
+//@WebServlet(urlPatterns = "/app/*")
 public class FrontController extends HttpServlet {
-    protected static List<String> controllersList = null;
     protected static Map<String, Mapping> urlMapping = null;
     protected static boolean firstInit = true;
     protected static String appName = "";
     protected RoleConfiguration roleConfiguration = new DefaultRoleConfiguration();
-//    protected static HttpSecurityConfiguration httpSecurityConfiguration = new HttpSecurityConfiguration();
     protected static HttpSecurity httpSecurity = new HttpSecurity();
 
     @Override
     public void init() throws ServletException{
-        super.init();
+//        super.init();
 
     }
 
@@ -101,38 +101,30 @@ public class FrontController extends HttpServlet {
                 doFirstInit(request, response);
             }
 
-            PrintWriter out = response.getWriter();
-            String url = request.getRequestURI();
+            String url = request.getRequestURI().replace("/app" , "");
+            System.out.println("My url: " + url);
             Mapping mapping = getMapping(url);
 
-            if (mapping == null) {
-                throw new HttpException(HttpServletResponse.SC_NOT_FOUND, "Il n\'y a pas de methode associé a ce chemin: " + url);
-            }
-//            Object execMethod = mapping.execMapping(request, response);
-            System.out.println("URI:   " + request.getRequestURI());
-            mapping.execMapping(request, response, roleConfiguration);
-
-
-//            if(mapping.isApi()) {
-//                response.setContentType("application/json");
-//                Gson gson = new MyJSON().getGson();
-//                out.write(gson.toJson(execMethod));
+//            if(url.endsWith(".css")){
+//                System.out.println("ends with css");
+//                request.getRequestDispatcher(url).forward(request, response);
 //                return;
 //            }
-//
-//            if(execMethod instanceof ModelView mv){
-//                mv.getAttributes().forEach((key, value) -> {
-//                    request.setAttribute(key, value);
-//                });
-//                request.getServletContext().getRequestDispatcher(mv.getUrl())
-//                        .forward(request, response);
-//
-//            } else if (execMethod instanceof String str){
-//                out.println(str);
-//
-//            } else {
-//                throw new ServletException("Type de retour du methode: '" + mapping.getMethodName() +"' invalide");
-//            }
+
+            if (mapping == null) {
+                System.out.println("let s go 3");
+//                request.getRequestDispatcher(url).forward(request, response);
+                return;
+
+
+            }
+//                PrintWriter out = response.getWriter();
+                System.out.println("URI:   " + request.getRequestURI());
+                mapping.execMapping(request, response, roleConfiguration);
+//                }
+//                out.close();
+
+
         }  catch (FormException formException) {
             formException.printStackTrace();
             Gson gson = new Gson();
@@ -164,7 +156,6 @@ public class FrontController extends HttpServlet {
 
 
     protected static Mapping getMapping(String url) {
-//        if(url.endsWith("/")) url = url.substring(0, url.length() - 1);
         return urlMapping.get(url);
     }
 

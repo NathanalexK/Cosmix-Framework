@@ -1,8 +1,8 @@
 package mg.itu.prom16.util;
 
 import com.google.gson.Gson;
-import com.thoughtworks.paranamer.AdaptiveParanamer;
-import com.thoughtworks.paranamer.Paranamer;
+//import com.thoughtworks.paranamer.AdaptiveParanamer;
+//import com.thoughtworks.paranamer.Paranamer;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
@@ -52,7 +52,7 @@ public class HttpMethodAction {
 //            boolean isPermitAll = ArrayUtils.contains(urlRole.getRoles(), "*") || urlRole.getRoles().length == 0;
 
             for(String urlPattern: urlRole.getUrlPatterns()) {
-                if(StringMatcher.isMatch(FrontController.getApplicationName() + urlPattern, url)){
+                if(StringMatcher.isMatch(FrontController.getApplicationName() + "/app" +urlPattern, url)){
                     System.out.println("Url Match: " + url);
                     this.setRoles(urlRole.getRoles());
 //                    this.setHasRoles(!isPermitAll);
@@ -178,9 +178,9 @@ public class HttpMethodAction {
 
         Method actionMethod = getAction();
 
-        Paranamer paranamer = new AdaptiveParanamer();
+//        Paranamer paranamer = new AdaptiveParanamer();
         Parameter[] parameters = actionMethod.getParameters();
-        String[] paramNames = paranamer.lookupParameterNames(actionMethod);
+//        String[] paramNames = paranamer.lookupParameterNames(actionMethod);
         Object[] paramValues = new Object[parameters.length];
 
         Map<String, String> error = new HashMap<>();
@@ -258,6 +258,11 @@ public class HttpMethodAction {
 
     public void processModelView(HttpServletRequest request, HttpServletResponse response, ModelView mv) throws ServletException, IOException {
         mv.getAttributes().forEach(request::setAttribute);
+
+        if(mv.getUrl().startsWith("redirect:")) {
+            response.sendRedirect(FrontController.getApplicationName() + mv.getUrl().replaceAll("redirect:", ""));
+            return;
+        }
 //        Object hasErrorObj = request.getAttribute("hasError");
 //        System.out.println("hasErrorObj: " + hasErrorObj);
 //        if(hasErrorObj != null && hasErrorObj instanceof Boolean hasError && hasError) {

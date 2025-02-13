@@ -23,9 +23,13 @@ public class Reflect {
         List<Class<?>> classes = new ArrayList<>();
 
         try {
-            url = Thread.currentThread().getContextClassLoader().getResource(packageName);
+            System.out.println("package name: " + packageName);
+            String packageUrl = packageName.replaceAll("\\.", "/");
+            url = Thread.currentThread().getContextClassLoader().getResource(packageUrl);
+            System.out.println("Url from context class loader: " + url);
             pkg = new File(url.getFile().replaceAll("\\.", "/"));
         }catch (NullPointerException e) {
+            e.printStackTrace();
             throw new ServletException("Package Controlleur non trouvé!");
         }
 

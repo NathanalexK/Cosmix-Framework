@@ -14,7 +14,7 @@ public class ValueParser {
         System.out.println(value);
         switch (paramType) {
             case "localdate" -> {
-                return LocalDate.parse(value, DateTimeUtils.DATE_FORMATTER);
+                return LocalDate.parse(value);
             }
             case "localtime" -> {
                 return LocalTime.parse(value);

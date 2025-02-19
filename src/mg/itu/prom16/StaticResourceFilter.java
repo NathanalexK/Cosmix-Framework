@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.util.UrlResolver;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.SocketException;
 import java.net.URISyntaxException;
 
@@ -18,10 +19,11 @@ public class StaticResourceFilter implements Filter {
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         String path = httpRequest.getRequestURI();
-        System.out.println("do filter 2");
+        System.out.println("do filter 6 " + path );
         // Check if the request is for a static resource
         if (isStaticResource(path)) {
             System.out.println("url is static 2");
+
             // Forward to the default servlet for static resources
             return;
         }

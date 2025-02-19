@@ -92,16 +92,18 @@ public class Reflect {
         return urlMapping;
     }
 
-    public static Object setObjectField(Object obj, Field field, Object value)
+    public static Object setObjectField(Object obj, Field field, Object value, boolean checkValidation)
             throws Exception {
         Method[] methods = obj.getClass().getDeclaredMethods();
-        return setObjectField(obj, methods, field, value);
+        return setObjectField(obj, methods, field, value, checkValidation);
     }
 
-    public static Object setObjectField(Object obj, Method[] methods, Field field, Object value)
+    public static Object setObjectField(Object obj, Method[] methods, Field field, Object value, boolean checkValidation)
             throws Exception {
 
-        checkField(field, value);
+        if(checkValidation) {
+            checkField(field, value);
+        }
 
         String setterMethod = "set" + Utility.capitalize(field.getName());
         for(Method method : methods) {

@@ -11,6 +11,7 @@ import jakarta.servlet.http.Part;
 import mg.itu.prom16.FrontController;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.RestApi;
+import mg.itu.prom16.annotations.model.FormValidation;
 import mg.itu.prom16.annotations.security.Authenticated;
 import mg.itu.prom16.annotations.security.Roles;
 import mg.itu.prom16.configuration.RoleConfiguration;
@@ -198,7 +199,8 @@ public class HttpMethodAction {
                 throw new ServletException("etu2498: Annotation @Param de la methode:" + actionMethod.getName() + " introuvable");
 
 //            try {
-            paramValues[i] = getValueFromRequest(request, paramName, parameters[i].getType());
+            System.out.println("Form Validation? " + parameters[i].isAnnotationPresent(FormValidation.class));
+            paramValues[i] = getValueFromRequest(request, paramName, parameters[i].getType(), parameters[i].isAnnotationPresent(FormValidation.class));
 //            } catch (ValidationException ve) {
 //                error.put()
 //            }
@@ -285,7 +287,7 @@ public class HttpMethodAction {
             .forward(request, response);
     }
 
-    public Object getValueFromRequest(HttpServletRequest request, String paramName, Class<?> parmType)
+    public Object getValueFromRequest(HttpServletRequest request, String paramName, Class<?> parmType, boolean checkValidation)
             throws Exception {
         request.setAttribute("hasError", false);
         System.out.println(paramName + ": " + request.getParameter(paramName));
@@ -329,7 +331,7 @@ public class HttpMethodAction {
 
             try {
                 model.put(requestAttName, value);
-                Reflect.setObjectField(obj, methods, field, value);
+                Reflect.setObjectField(obj, methods, field, value, checkValidation);
             } catch (ValidationException ve) {
                 hasError = true;
                 errorMap.put(requestAttName, ve.getError());

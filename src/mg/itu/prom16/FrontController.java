@@ -142,10 +142,11 @@ public class FrontController extends HttpServlet {
         } catch (HttpException httpException) {
             httpException.printStackTrace();
             PageError.showPage(response, httpException.getHttpStatus(), httpException.getMessage());
+
         } catch (Exception e){
             e.printStackTrace();
             PageError.showPage(response, 500, e.getMessage());
-            throw new ServletException(e.getMessage());
+//            throw new ServletException(e.getMessage());
         }
     }
 

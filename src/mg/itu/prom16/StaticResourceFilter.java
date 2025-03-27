@@ -11,7 +11,7 @@ import java.io.PrintWriter;
 import java.net.SocketException;
 import java.net.URISyntaxException;
 
-@WebFilter("/*")
+//@WebFilter("/*")
 public class StaticResourceFilter implements Filter {
 
     @Override
@@ -30,8 +30,8 @@ public class StaticResourceFilter implements Filter {
 
         // Proceed to the next filter or servlet for non-static resources
         try {
-            System.out.println("sadsd: " + "/app" + UrlResolver.getRelativeUrl(path));
-            request.getRequestDispatcher("/app" + UrlResolver.getRelativeUrl(path)).forward(request, response);
+            System.out.println("sadsd: " + UrlResolver.getRelativeUrl(path));
+            request.getRequestDispatcher(UrlResolver.getRelativeUrl(path)).forward(request, response);
         } catch (URISyntaxException e) {
             throw new SocketException(e);
         }

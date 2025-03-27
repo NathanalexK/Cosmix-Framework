@@ -101,7 +101,7 @@ public class FrontController extends HttpServlet {
                 doFirstInit(request, response);
             }
 
-            String url = request.getRequestURI().replace("/app" , "");
+            String url = request.getRequestURI();
             System.out.println("My url: " + url);
             Mapping mapping = getMapping(url);
 

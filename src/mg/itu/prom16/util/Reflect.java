@@ -125,6 +125,7 @@ public class Reflect {
         List<String> errors = new ArrayList<>();
 
         if(field.isAnnotationPresent(Required.class) && !ValidationUtils.checkRequired(String.valueOf(value))) {
+            System.out.println("Attribute is required");
             errors.add("Field " + field.getName() + " is required");
 //            validationExceptions.add(new ValidationException("Field " + field.getName() + " is required"));
         }

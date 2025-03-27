@@ -3,6 +3,7 @@ package mg.itu.prom16.util;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 public class ValueParser {
 
@@ -40,9 +41,18 @@ public class ValueParser {
             case "string" -> {
                 return value;
             }
+//            case "list" -> {
+//                value
+//            }
             default -> {
                 return type.cast(value);
             }
         }
     }
+
+//    public static Object parseStringValues(String[] values, Class<?> type) {
+//        if(!type.isArray()) return parseStringValue(values[0], type);
+
+//        ((Class<List>)type).getClass().
+//    }
 }

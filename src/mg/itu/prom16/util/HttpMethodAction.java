@@ -11,7 +11,7 @@ import jakarta.servlet.http.Part;
 import mg.itu.prom16.FrontController;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.RestApi;
-import mg.itu.prom16.annotations.model.FormValidation;
+import mg.itu.prom16.annotations.model.RequireValidation;
 import mg.itu.prom16.annotations.security.Authenticated;
 import mg.itu.prom16.annotations.security.Roles;
 import mg.itu.prom16.configuration.RoleConfiguration;
@@ -53,7 +53,7 @@ public class HttpMethodAction {
 //            boolean isPermitAll = ArrayUtils.contains(urlRole.getRoles(), "*") || urlRole.getRoles().length == 0;
 
             for(String urlPattern: urlRole.getUrlPatterns()) {
-                if(StringMatcher.isMatch(FrontController.getApplicationName() + "/app" +urlPattern, url)){
+                if(StringMatcher.isMatch(FrontController.getApplicationName() + urlPattern, url)){
                     System.out.println("Url Match: " + url);
                     this.setRoles(urlRole.getRoles());
 //                    this.setHasRoles(!isPermitAll);
@@ -184,7 +184,11 @@ public class HttpMethodAction {
 //        String[] paramNames = paranamer.lookupParameterNames(actionMethod);
         Object[] paramValues = new Object[parameters.length];
 
+        boolean requireValidation = false;
         Map<String, String> error = new HashMap<>();
+        mg.itu.prom16.util.FormValidation fv = new mg.itu.prom16.util.FormValidation<>();
+
+        Integer validationParamIndex = null;
 
         for (int i = 0; i < parameters.length; i++) {
             String paramName = null;
@@ -195,30 +199,45 @@ public class HttpMethodAction {
                 if (customSession == null) customSession = new CustomSession(request.getSession());
                 paramValues[i] = customSession;
                 continue;
-            } else
+            } else if (parameters[i].getType().equals(mg.itu.prom16.util.FormValidation.class)){
+                System.out.println("HttpMethodAction 202");
+                paramValues[i] = null;
+                validationParamIndex = i;
+                continue;
+            }
+
+            else
                 throw new ServletException("etu2498: Annotation @Param de la methode:" + actionMethod.getName() + " introuvable");
 
 //            try {
-            System.out.println("Form Validation? " + parameters[i].isAnnotationPresent(FormValidation.class));
-            paramValues[i] = getValueFromRequest(request, paramName, parameters[i].getType(), parameters[i].isAnnotationPresent(FormValidation.class));
+            System.out.println("Form Validation? " + parameters[i].isAnnotationPresent(RequireValidation.class));
+            requireValidation = parameters[i].isAnnotationPresent(RequireValidation.class);
+            Arrays.stream(parameters[i].getAnnotations()).forEach(annotation -> System.out.println(annotation));
+            paramValues[i] = getValueFromRequest(request, paramName, parameters[i].getType(), requireValidation, fv);
 //            } catch (ValidationException ve) {
 //                error.put()
 //            }
         }
+        System.out.println("validation parameter index: " + validationParamIndex);
 
-        if(this.checkBindingErrors(request, response)) {
-            String prevUrl = UrlResolver.getRelativeUrl(request.getHeader("Referer"));
-            System.out.printf("Prev Url:" + prevUrl);
-            HttpServletRequestWrapper newReq = new HttpServletRequestWrapper(request) {
-                @Override
-                public String getMethod() {
-                    return "GET";
-                }
-            };
-            request.removeAttribute("hasError");
-            request.getServletContext().getRequestDispatcher(prevUrl).forward(newReq, response);
-            return;
+        if(validationParamIndex != null) {
+            fv.setRequest(request);
+            paramValues[validationParamIndex] = fv;
         }
+
+//        if(validationParamIndex != null && this.checkBindingErrors(request, response)) {
+//            String prevUrl = UrlResolver.getRelativeUrl(request.getHeader("Referer"));
+//            System.out.printf("Prev Url:" + prevUrl);
+//            HttpServletRequestWrapper newReq = new HttpServletRequestWrapper(request) {
+//                @Override
+//                public String getMethod() {
+//                    return "GET";
+//                }
+//            };
+//            request.removeAttribute("hasError");
+//            request.getServletContext().getRequestDispatcher().forward(newReq, response);
+//            return;
+//        }
 
         Object invoked = actionMethod.invoke(controller, paramValues);
         if (customSession != null) customSession.toHttpSession(request.getSession());
@@ -265,29 +284,28 @@ public class HttpMethodAction {
             response.sendRedirect(FrontController.getApplicationName() + mv.getUrl().replaceAll("redirect:", ""));
             return;
         }
-//        Object hasErrorObj = request.getAttribute("hasError");
-//        System.out.println("hasErrorObj: " + hasErrorObj);
-//        if(hasErrorObj != null && hasErrorObj instanceof Boolean hasError && hasError) {
-//            System.out.println("Has error = true");
-//            HttpServletRequestWrapper wrapper = new HttpServletRequestWrapper(request){
-//                @Override
-//                public String getMethod() {
-//                    return "GET";
-//                }
-//            };
-//            System.out.println("New Method: " + request.getMethod());
-//            String referer = "/" + request.getHeader("Referer");
-//            request.setAttribute("hasError", null);
-//            request.getServletContext().getRequestDispatcher(mv.getRedirectErrorUrl()).forward(wrapper, response);
-//            return;
-//        }
+        Object hasErrorObj = request.getAttribute("hasError");
+        System.out.println("hasErrorObj: " + hasErrorObj);
+        if(hasErrorObj != null && hasErrorObj instanceof Boolean hasError && hasError) {
+            System.out.println("Has error = true");
+            HttpServletRequestWrapper wrapper = new HttpServletRequestWrapper(request){
+                @Override
+                public String getMethod() {
+                    return "GET";
+                }
+            };
+            System.out.println("New Method: " + request.getMethod());
+            request.setAttribute("hasError", null);
+            request.getServletContext().getRequestDispatcher(mv.getUrl()).forward(wrapper, response);
+            return;
+        }
 
 
         request.getServletContext().getRequestDispatcher(mv.getUrl())
             .forward(request, response);
     }
 
-    public Object getValueFromRequest(HttpServletRequest request, String paramName, Class<?> parmType, boolean checkValidation)
+    public Object getValueFromRequest(HttpServletRequest request, String paramName, Class<?> parmType, boolean checkValidation, mg.itu.prom16.util.FormValidation fv)
             throws Exception {
         request.setAttribute("hasError", false);
         System.out.println(paramName + ": " + request.getParameter(paramName));
@@ -313,8 +331,6 @@ public class HttpMethodAction {
             Object value = null;
             String requestAttName = paramName + "." + field.getName();
 
-
-
             if(field.getType() == CustomFile.class) {
                 Part part = request.getPart(requestAttName);
                 if(part == null) continue;
@@ -338,13 +354,14 @@ public class HttpMethodAction {
             }
         }
         if(hasError) {
+            fv.setHasError(true);
             System.out.println("iiioooo");
             request.setAttribute("hasError", true);
             request.setAttribute("errors", errorMap);
 //            request.setAttribute("model", model);
 //            System.out.println("errorMapppp eeee");
 //            throw new FormException(errorMap);
-//            String error = "";
+//            String error = "";8
 //            throw new Exception("Exception found in Form:");
         }
 
